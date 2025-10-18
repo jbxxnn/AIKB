@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getValidAccessToken } from '@/lib/calendar'
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,32 +29,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if Google Calendar is connected and get valid token
-    const calendarToken = await getValidAccessToken('google')
-    
-    // Build tools array for ChatKit session
-    const tools = []
-    if (calendarToken) {
-      tools.push({
-        type: "mcp",
-        server_label: "google_calendar",
-        connector_id: "connector_googlecalendar",
-        authorization: calendarToken,
-        require_approval: "never"
-      })
-    }
-
     // Create ChatKit session
-    const sessionBody: any = {
-      workflow: { id: workflowId },
-      user: session.user.id,
-    }
-
-    // Add tools if any are available
-    if (tools.length > 0) {
-      sessionBody.tools = tools
-    }
-
     const response = await fetch('https://api.openai.com/v1/chatkit/sessions', {
       method: 'POST',
       headers: {
@@ -63,7 +37,10 @@ export async function POST(request: NextRequest) {
         'OpenAI-Beta': 'chatkit_beta=v1',
         'Authorization': `Bearer ${process.env.OPENAI_API_SECRET_KEY}`,
       },
-      body: JSON.stringify(sessionBody),
+      body: JSON.stringify({
+        workflow: { id: workflowId },
+        user: session.user.id,
+      }),
     })
 
     if (!response.ok) {
