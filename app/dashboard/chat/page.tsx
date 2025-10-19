@@ -5,7 +5,7 @@ import { ChatKit, useChatKit } from '@openai/chatkit-react'
 import { redirect } from 'next/navigation'
 import { Loading03Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 
 // Declare global ChatKit for manual configuration
 declare global {
@@ -22,6 +22,8 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null)
   const [chatKitReady, setChatKitReady] = useState(false)
   const [debugMode, setDebugMode] = useState(false)
+  const chatKitRef = useRef<HTMLDivElement>(null)
+  const hasRenderedChatKit = useRef(false)
 
   // Ensure component is mounted on client side
   useEffect(() => {
@@ -116,6 +118,53 @@ export default function ChatPage() {
       }, 1000)
     }
   }, [clientSecret, chatKitReady])
+
+  // Prevent re-rendering once ChatKit is loaded
+  useEffect(() => {
+    if (chatKitReady) {
+      console.log('ChatKit is ready, preventing further re-renders')
+      
+      // Check if iframe actually exists and is visible
+      const checkIframe = () => {
+        const chatKitElement = document.querySelector('openai-chatkit')
+        if (chatKitElement) {
+          const iframe = chatKitElement.querySelector('iframe')
+          if (iframe) {
+            console.log('Iframe found and visible:', iframe.offsetWidth > 0 && iframe.offsetHeight > 0)
+            console.log('Iframe dimensions:', { width: iframe.offsetWidth, height: iframe.offsetHeight })
+            console.log('Iframe src:', iframe.src)
+          } else {
+            console.log('No iframe found in ChatKit element')
+          }
+        }
+      }
+      
+      // Check immediately and after a delay
+      checkIframe()
+      setTimeout(checkIframe, 2000)
+      
+      // Force iframe to stay visible
+      const forceIframeVisible = () => {
+        const chatKitElement = document.querySelector('openai-chatkit')
+        if (chatKitElement) {
+          const iframe = chatKitElement.querySelector('iframe')
+          if (iframe) {
+            iframe.style.display = 'block'
+            iframe.style.visibility = 'visible'
+            iframe.style.opacity = '1'
+            iframe.style.height = '100%'
+            iframe.style.width = '100%'
+            console.log('Forced iframe to be visible')
+          }
+        }
+      }
+      
+      // Try to force visibility multiple times
+      forceIframeVisible()
+      setTimeout(forceIframeVisible, 1000)
+      setTimeout(forceIframeVisible, 3000)
+    }
+  }, [chatKitReady])
 
   // Manual fallback: Try to create ChatKit web component directly
   useEffect(() => {
@@ -308,6 +357,19 @@ export default function ChatPage() {
 
   return (
     <div className="h-full flex flex-col">
+      <style jsx>{`
+        openai-chatkit {
+          display: block !important;
+          height: 100% !important;
+          width: 100% !important;
+        }
+        openai-chatkit iframe {
+          display: block !important;
+          height: 100% !important;
+          width: 100% !important;
+          border: none !important;
+        }
+      `}</style>
       <div className="flex-1 min-h-0">
         {!chatKitReady && !error ? (
           <div className="flex items-center justify-center h-full">
@@ -327,8 +389,8 @@ export default function ChatPage() {
             </div>
           </div>
         ) : (
-          <div className="h-full w-full">
-            {clientSecret ? (
+          <div className="h-full w-full" ref={chatKitRef}>
+            {clientSecret && !hasRenderedChatKit.current ? (
               <div className="h-full w-full">
                 <ChatKit 
                   control={control} 
@@ -336,6 +398,7 @@ export default function ChatPage() {
                   style={{ minHeight: '400px' }}
                   onLoad={() => {
                     console.log('ChatKit component loaded')
+                    hasRenderedChatKit.current = true
                     setChatKitReady(true)
                   }}
                   onError={(error) => {
@@ -349,6 +412,15 @@ export default function ChatPage() {
                   className="h-full w-full"
                   style={{ display: 'none' }}
                 />
+              </div>
+            ) : clientSecret && hasRenderedChatKit.current ? (
+              <div className="h-full w-full">
+                <div className="h-full w-full rounded-sm bg-gray-50 flex items-center justify-center">
+                  <div className="text-center">
+                    <HugeiconsIcon icon={Loading03Icon} className="h-8 w-8 animate-spin mx-auto"/>
+                    <p className="mt-2 text-sm text-gray-600">ChatKit is loading...</p>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="flex items-center justify-center h-full">
