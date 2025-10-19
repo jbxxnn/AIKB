@@ -12,12 +12,31 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Reset loading state when session changes
+  useEffect(() => {
+    if (status === 'authenticated') {
+      setIsLoading(false)
+    }
+  }, [status])
+
+  // Add timeout to prevent infinite loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isLoading) {
+        console.log('Loading timeout reached')
+        setError('Loading timeout - please check your connection and try again')
+        setIsLoading(false)
+      }
+    }, 10000) // 10 second timeout
+
+    return () => clearTimeout(timer)
+  }, [isLoading])
+
   const { control } = useChatKit({
     api: {
       async getClientSecret(existing) {
         try {
           console.log('Creating ChatKit session...')
-          setIsLoading(true)
           setError(null)
 
           if (existing) {
@@ -37,17 +56,18 @@ export default function ChatPage() {
           if (!res.ok) {
             const errorText = await res.text()
             console.error('Session creation failed:', errorText)
-            throw new Error(`Failed to create chat session: ${res.status} ${errorText}`)
+            const errorMessage = `Failed to create chat session: ${res.status} ${errorText}`
+            setError(errorMessage)
+            throw new Error(errorMessage)
           }
 
           const data = await res.json()
           console.log('Session created successfully')
-          setIsLoading(false)
           return data.client_secret
         } catch (err) {
           console.error('ChatKit session error:', err)
-          setError(err instanceof Error ? err.message : 'Unknown error')
-          setIsLoading(false)
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+          setError(errorMessage)
           throw err
         }
       },
@@ -59,7 +79,6 @@ export default function ChatPage() {
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <HugeiconsIcon icon={Loading03Icon} className="h-10 w-10 animate-spin"/>
-          <p className="mt-2">Loading chat...</p>
         </div>
       </div>
     )
