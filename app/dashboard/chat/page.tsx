@@ -12,10 +12,32 @@ export default function ChatPage() {
   const [isMounted, setIsMounted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [chatKitReady, setChatKitReady] = useState(false)
+  const [debugMode, setDebugMode] = useState(false)
 
   // Ensure component is mounted on client side
   useEffect(() => {
     setIsMounted(true)
+    
+    // Check if ChatKit script is loaded
+    const checkChatKitScript = () => {
+      const script = document.querySelector('script[src*="chatkit.js"]') as HTMLScriptElement | null
+      if (script) {
+        console.log('ChatKit script found:', script.getAttribute('src'))
+        script.addEventListener('load', () => {
+          console.log('ChatKit script loaded')
+        })
+        script.addEventListener('error', (e) => {
+          console.error('ChatKit script failed to load:', e)
+          setError('Failed to load ChatKit script')
+        })
+      } else {
+        console.error('ChatKit script not found in DOM')
+        setError('ChatKit script not found')
+      }
+    }
+    
+    // Check after a short delay to ensure DOM is ready
+    setTimeout(checkChatKitScript, 100)
   }, [])
 
   // Memoize the getClientSecret function to prevent recreating on every render
@@ -73,22 +95,75 @@ export default function ChatPage() {
       setChatKitReady(true)
     }
 
+    const handleChatKitLoaded = () => {
+      console.log('ChatKit loaded')
+      setChatKitReady(true)
+    }
+
     // Listen for ChatKit events
     window.addEventListener('chatkit.error', handleChatKitError)
     window.addEventListener('chatkit.response.start', handleChatKitReady)
+    window.addEventListener('chatkit.response.end', handleChatKitLoaded)
+
+    // Also check for the web component to be loaded
+    const checkChatKitElement = () => {
+      const chatKitElement = document.querySelector('openai-chatkit')
+      if (chatKitElement) {
+        console.log('ChatKit element found:', chatKitElement)
+        console.log('ChatKit element attributes:', chatKitElement.attributes)
+        
+        // Check if the element has loaded
+        if (chatKitElement.getAttribute('data-loaded') === 'true') {
+          console.log('ChatKit element is loaded')
+          setChatKitReady(true)
+        } else {
+          console.log('ChatKit element not loaded yet, checking again...')
+          console.log('Current attributes:', Array.from(chatKitElement.attributes).map(attr => `${attr.name}="${attr.value}"`))
+          
+          // Check if there's an iframe inside
+          const iframe = chatKitElement.querySelector('iframe')
+          if (iframe) {
+            console.log('Iframe found:', iframe.src)
+            console.log('Iframe loaded:', iframe.contentWindow?.document.readyState === 'complete')
+          } else {
+            console.log('No iframe found yet')
+          }
+          
+          // Check again in 1 second
+          setTimeout(checkChatKitElement, 1000)
+        }
+      } else {
+        console.log('ChatKit element not found yet, checking again...')
+        // Check again in 500ms
+        setTimeout(checkChatKitElement, 500)
+      }
+    }
+
+    // Start checking for the element
+    checkChatKitElement()
 
     // Set a timeout to show ChatKit even if events don't fire
     const timeout = setTimeout(() => {
       console.log('ChatKit timeout - showing component anyway')
       setChatKitReady(true)
-    }, 5000) // 5 second timeout
+    }, 3000) // 3 second timeout - more aggressive
+    
+    // Also try to force show after 1 second if we have a session
+    const forceShowTimeout = setTimeout(() => {
+      if (session && !chatKitReady) {
+        console.log('Force showing ChatKit after 1 second')
+        setChatKitReady(true)
+      }
+    }, 1000)
 
     return () => {
       window.removeEventListener('chatkit.error', handleChatKitError)
       window.removeEventListener('chatkit.response.start', handleChatKitReady)
+      window.removeEventListener('chatkit.response.end', handleChatKitLoaded)
       clearTimeout(timeout)
+      clearTimeout(forceShowTimeout)
     }
-  }, [])
+  }, [session])
 
   // Prevent hydration mismatch
   if (!isMounted) {
@@ -151,13 +226,25 @@ export default function ChatPage() {
               <HugeiconsIcon icon={Loading03Icon} className="h-10 w-10 animate-spin"/>
               <p className="mt-2">Initializing ChatKit...</p>
               <p className="text-xs text-gray-500 mt-1">Setting up chat interface</p>
+              <button 
+                onClick={() => {
+                  console.log('Force showing ChatKit manually')
+                  setChatKitReady(true)
+                }}
+                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+              >
+                Force Show ChatKit
+              </button>
             </div>
           </div>
         ) : (
-          <ChatKit 
-            control={control} 
-            className="h-full w-full rounded-sm"
-          />
+          <div className="h-full w-full">
+            <ChatKit 
+              control={control} 
+              className="h-full w-full rounded-sm"
+              style={{ minHeight: '400px' }}
+            />
+          </div>
         )}
       </div>
     </div>
