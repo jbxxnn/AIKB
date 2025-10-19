@@ -5,9 +5,16 @@ import { ChatKit, useChatKit } from '@openai/chatkit-react'
 import { redirect } from 'next/navigation'
 import { Loading03Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
+import { useState, useEffect } from 'react'
 
 export default function ChatPage() {
   const { data: session, status } = useSession()
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Ensure component is mounted on client side
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const { control } = useChatKit({
     api: {
@@ -40,6 +47,18 @@ export default function ChatPage() {
       },
     },
   })
+
+  // Prevent hydration mismatch
+  if (!isMounted) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <HugeiconsIcon icon={Loading03Icon} className="h-10 w-10 animate-spin"/>
+          <p className="mt-2">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (status === 'loading') {
     return (
