@@ -37,6 +37,11 @@ export async function POST(request: NextRequest) {
 
     // Create ChatKit session
     console.log('Creating ChatKit session with OpenAI API...')
+    console.log('Request body:', JSON.stringify({
+      workflow: { id: workflowId },
+      user: session.user.id,
+    }))
+    
     const response = await fetch('https://api.openai.com/v1/chatkit/sessions', {
       method: 'POST',
       headers: {
@@ -51,10 +56,17 @@ export async function POST(request: NextRequest) {
     })
 
     console.log('OpenAI API response status:', response.status)
+    console.log('OpenAI API response headers:', Object.fromEntries(response.headers.entries()))
 
     if (!response.ok) {
       const error = await response.text()
       console.error('ChatKit session creation failed:', error)
+      console.error('Full error response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: error
+      })
       return NextResponse.json(
         { error: `Failed to create chat session: ${response.status} ${error}` }, 
         { status: 500 }
@@ -63,6 +75,7 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json()
     console.log('ChatKit session created successfully')
+    console.log('Response data keys:', Object.keys(data))
     
     return NextResponse.json({ client_secret: data.client_secret })
   } catch (error) {
