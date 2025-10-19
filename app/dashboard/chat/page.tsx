@@ -10,27 +10,7 @@ import { useState, useEffect } from 'react'
 export default function ChatPage() {
   const { data: session, status } = useSession()
   const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  // Reset loading state when session changes
-  useEffect(() => {
-    if (status === 'authenticated') {
-      setIsLoading(false)
-    }
-  }, [status])
-
-  // Add timeout to prevent infinite loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (isLoading) {
-        console.log('Loading timeout reached')
-        setError('Loading timeout - please check your connection and try again')
-        setIsLoading(false)
-      }
-    }, 10000) // 10 second timeout
-
-    return () => clearTimeout(timer)
-  }, [isLoading])
+  const [isInitialized, setIsInitialized] = useState(false)
 
   const { control } = useChatKit({
     api: {
@@ -63,6 +43,7 @@ export default function ChatPage() {
 
           const data = await res.json()
           console.log('Session created successfully')
+          setIsInitialized(true)
           return data.client_secret
         } catch (err) {
           console.error('ChatKit session error:', err)
@@ -74,11 +55,12 @@ export default function ChatPage() {
     },
   })
 
-  if (status === 'loading' || isLoading) {
+  if (status === 'loading') {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <HugeiconsIcon icon={Loading03Icon} className="h-10 w-10 animate-spin"/>
+          <p className="mt-2">Loading...</p>
         </div>
       </div>
     )
@@ -103,6 +85,17 @@ export default function ChatPage() {
               Retry
             </button>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <HugeiconsIcon icon={Loading03Icon} className="h-10 w-10 animate-spin"/>
+          <p className="mt-2">Initializing ChatKit...</p>
         </div>
       </div>
     )
