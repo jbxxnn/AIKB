@@ -23,9 +23,9 @@ export default function ChatPage() {
     setDebugInfo(prev => [...prev.slice(-9), debugMessage]) // Keep last 10 messages
   }
 
-  // Track renders
+  // Track renders (but don't update state on every render)
   renderCount.current += 1
-  addDebugInfo(`Render #${renderCount.current} - Status: ${status}, Mounted: ${isMounted}, ChatKitState: ${chatKitState}`)
+  console.log(`Render #${renderCount.current} - Status: ${status}, Mounted: ${isMounted}, ChatKitState: ${chatKitState}`)
 
   // Ensure component is mounted on client side
   useEffect(() => {
@@ -105,7 +105,7 @@ export default function ChatPage() {
 
   // Prevent hydration mismatch
   if (!isMounted) {
-    addDebugInfo('Rendering: Not mounted yet')
+    console.log('Rendering: Not mounted yet')
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -118,7 +118,7 @@ export default function ChatPage() {
   }
 
   if (status === 'loading') {
-    addDebugInfo('Rendering: Session loading')
+    console.log('Rendering: Session loading')
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -131,13 +131,13 @@ export default function ChatPage() {
   }
 
   if (!session) {
-    addDebugInfo('Rendering: No session, redirecting')
+    console.log('Rendering: No session, redirecting')
     redirect('/auth/signin')
     return null
   }
 
   if (chatKitState === 'error') {
-    addDebugInfo('Rendering: ChatKit error state')
+    console.log('Rendering: ChatKit error state')
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center max-w-md">
@@ -157,7 +157,7 @@ export default function ChatPage() {
   }
 
   if (chatKitState === 'disappeared') {
-    addDebugInfo('Rendering: ChatKit disappeared state')
+    console.log('Rendering: ChatKit disappeared state')
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center max-w-md">
@@ -176,7 +176,7 @@ export default function ChatPage() {
     )
   }
 
-  addDebugInfo(`Rendering: ChatKit component - State: ${chatKitState}`)
+  console.log(`Rendering: ChatKit component - State: ${chatKitState}`)
 
   return (
     <div className="h-full flex flex-col">
