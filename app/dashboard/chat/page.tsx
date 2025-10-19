@@ -7,6 +7,15 @@ import { Loading03Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 
+// Declare global ChatKit for manual configuration
+declare global {
+  interface Window {
+    ChatKit?: {
+      setOptions: (options: any) => void;
+    };
+  }
+}
+
 export default function ChatPage() {
   const { data: session, status } = useSession()
   const [isMounted, setIsMounted] = useState(false)
@@ -83,6 +92,71 @@ export default function ChatPage() {
 
   const { control } = useChatKit(chatKitConfig)
 
+  // Try a different approach - get client secret immediately
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
+  
+  useEffect(() => {
+    if (session && !clientSecret) {
+      console.log('Getting initial client secret...')
+      getClientSecret(null).then((secret) => {
+        console.log('Got initial client secret:', !!secret)
+        setClientSecret(secret)
+      }).catch((error) => {
+        console.error('Failed to get initial client secret:', error)
+      })
+    }
+  }, [session, clientSecret, getClientSecret])
+
+  // Try to force ChatKit to show after we have a client secret
+  useEffect(() => {
+    if (clientSecret && !chatKitReady) {
+      console.log('Client secret available, forcing ChatKit to show')
+      setTimeout(() => {
+        setChatKitReady(true)
+      }, 1000)
+    }
+  }, [clientSecret, chatKitReady])
+
+  // Manual fallback: Try to create ChatKit web component directly
+  useEffect(() => {
+    if (clientSecret && !chatKitReady) {
+      console.log('Attempting manual ChatKit creation...')
+      const manualDiv = document.getElementById('manual-chatkit')
+      if (manualDiv && !manualDiv.querySelector('openai-chatkit')) {
+        const chatKitElement = document.createElement('openai-chatkit')
+        chatKitElement.className = 'h-full w-full rounded-sm'
+        chatKitElement.style.minHeight = '400px'
+        chatKitElement.setAttribute('data-client-secret', clientSecret)
+        
+        // Try to configure it manually
+        if ((window as any).ChatKit) {
+          console.log('ChatKit global available, configuring...')
+          try {
+            (chatKitElement as any).setOptions({
+              api: {
+                getClientSecret: () => Promise.resolve(clientSecret)
+              }
+            })
+          } catch (error) {
+            console.error('Failed to configure ChatKit manually:', error)
+          }
+        }
+        
+        manualDiv.appendChild(chatKitElement)
+        console.log('Manual ChatKit element created')
+        
+        // Show the manual version
+        manualDiv.style.display = 'block'
+        setChatKitReady(true)
+      }
+    }
+  }, [clientSecret, chatKitReady])
+
+  // Debug: Log when control changes
+  useEffect(() => {
+    console.log('ChatKit control updated:', control)
+  }, [control])
+
   // Add error handling for ChatKit initialization
   useEffect(() => {
     const handleChatKitError = (event: any) => {
@@ -111,6 +185,21 @@ export default function ChatPage() {
       if (chatKitElement) {
         console.log('ChatKit element found:', chatKitElement)
         console.log('ChatKit element attributes:', chatKitElement.attributes)
+        
+        // Try to manually configure the element if it doesn't have a client secret
+        if (!chatKitElement.hasAttribute('data-client-secret')) {
+          console.log('Attempting to manually configure ChatKit element...')
+          // Try to get a client secret and set it
+          getClientSecret(null).then((clientSecret) => {
+            console.log('Got client secret for manual config:', !!clientSecret)
+            if (clientSecret) {
+              chatKitElement.setAttribute('data-client-secret', clientSecret)
+              console.log('Set client secret on element')
+            }
+          }).catch((error) => {
+            console.error('Failed to get client secret for manual config:', error)
+          })
+        }
         
         // Check if the element has loaded
         if (chatKitElement.getAttribute('data-loaded') === 'true') {
@@ -239,11 +328,37 @@ export default function ChatPage() {
           </div>
         ) : (
           <div className="h-full w-full">
-            <ChatKit 
-              control={control} 
-              className="h-full w-full rounded-sm"
-              style={{ minHeight: '400px' }}
-            />
+            {clientSecret ? (
+              <div className="h-full w-full">
+                <ChatKit 
+                  control={control} 
+                  className="h-full w-full rounded-sm"
+                  style={{ minHeight: '400px' }}
+                  onLoad={() => {
+                    console.log('ChatKit component loaded')
+                    setChatKitReady(true)
+                  }}
+                  onError={(error) => {
+                    console.error('ChatKit component error:', error)
+                    setError(`ChatKit Component Error: ${error}`)
+                  }}
+                />
+                {/* Fallback: Try to manually create the web component */}
+                <div 
+                  id="manual-chatkit" 
+                  className="h-full w-full"
+                  style={{ display: 'none' }}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <HugeiconsIcon icon={Loading03Icon} className="h-10 w-10 animate-spin"/>
+                  <p className="mt-2">Getting client secret...</p>
+                  <p className="text-xs text-gray-500 mt-1">Authenticating with OpenAI</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
