@@ -16,7 +16,26 @@ declare global {
   }
 }
 
+// Temporarily redirect to advanced ChatKit
 export default function ChatPage() {
+  // Redirect to advanced ChatKit implementation
+  if (typeof window !== 'undefined') {
+    window.location.href = '/dashboard/chat/advanced'
+    return null
+  }
+  
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center">
+        <HugeiconsIcon icon={Loading03Icon} className="h-10 w-10 animate-spin"/>
+        <p className="mt-2">Redirecting to Advanced ChatKit...</p>
+      </div>
+    </div>
+  )
+}
+
+// Original ChatPage implementation (commented out for now)
+function OriginalChatPage() {
   const { data: session, status } = useSession()
   const [isMounted, setIsMounted] = useState(false)
   const [error, setError] = useState<string | null>(null)
