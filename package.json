@@ -14,7 +14,7 @@
     "@hugeicons/core-free-icons": "^1.2.0",
     "@hugeicons/react": "^1.1.1",
     "@neondatabase/serverless": "latest",
-    "@openai/chatkit-react": "^1.1.1",
+    "@openai/agents": "^0.2.1",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
     "@radix-ui/react-aspect-ratio": "1.1.1",
