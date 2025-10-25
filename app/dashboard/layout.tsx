@@ -30,7 +30,7 @@ export default async function DashboardLayout({
         </div>
         <div className="flex flex-1 w-full overflow-hidden">
           <DashboardSidebar />
-          <SidebarInset>
+          <SidebarInset className="flex-1">
             <main className="flex-1 p-0 overflow-auto border-none shadow-none rounded-none">
               {children}
             </main>

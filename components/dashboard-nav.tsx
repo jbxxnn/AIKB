@@ -34,7 +34,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 px-4">
-      {/* <SidebarTrigger className="-ml-1" /> */}
+      <SidebarTrigger className="-ml-1" />
       <div className="flex items-center gap-2">
       <HugeiconsIcon icon={ChatSpark01Icon} />
         <h1 className="text-xl font-bold">AI.KB</h1>

@@ -35,7 +35,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { signOut, useSession } from 'next-auth/react'
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Comment01Icon, DashboardSquare03Icon, DocumentAttachmentIcon, CalendarIcon } from '@hugeicons/core-free-icons';
+import { Comment01Icon, DashboardSquare03Icon, DocumentAttachmentIcon, CalendarIcon, ChatSpark01Icon } from '@hugeicons/core-free-icons';
 
 const items = [
   {
@@ -104,7 +104,10 @@ export function DashboardSidebar() {
   return (
     <Sidebar variant="inset" className="pt-16">
       <SidebarHeader>
-       
+        <div className="flex items-center gap-2 px-2">
+          <HugeiconsIcon icon={ChatSpark01Icon} />
+          <span className="font-semibold">AI.KB</span>
+        </div>
       </SidebarHeader>
       <SidebarContent >
         <SidebarGroup>
